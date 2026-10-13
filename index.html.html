@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>香山高中 閱讀理解課程 合約大冒險小遊戲</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#111218;color:#e8e8ee;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:8px;user-select:none}
+h1{font-size:17px;margin:4px 0}
+#hud{width:640px;max-width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#1d1f29;padding:8px;border-radius:6px;font-size:13px}
+.stat b{display:inline-block;width:40px}
+.bar{height:7px;background:#383b49;border-radius:4px;overflow:hidden;margin-top:3px}
+.bar>div{height:100%;transition:width .3s}
+#wrap{position:relative;width:640px;max-width:100%;margin-top:6px}
+canvas{display:block;width:100%;height:auto;border:2px solid #333;border-radius:6px;touch-action:none}
+#toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(20,22,32,.92);border:1px solid #6ea8ff;border-radius:8px;padding:7px 12px;font-size:13px;max-width:92%;display:none;text-align:center;pointer-events:none;color:#cfe3ff;z-index:5}
+#panel{position:absolute;inset:0;background:rgba(0,0,0,.88);display:none;align-items:flex-start;justify-content:center;padding:10px;border-radius:6px;z-index:6}
+#box{background:#1d1f29;border:2px solid #6ea8ff;border-radius:10px;width:100%;max-height:100%;overflow:auto;padding:14px;font-size:14px;line-height:1.6}
+.speaker{font-size:16px;font-weight:bold;color:#ffd76e;margin-bottom:6px}
+.sub{font-size:13px;color:#9aa0b5;font-weight:normal}
+.msg{background:#2a2e3d;border-radius:8px;padding:9px;margin:7px 0}
+.contract{background:#f3efe2;color:#1d1d1d;padding:10px;border-radius:4px;font-family:"Noto Serif TC",serif;white-space:pre-wrap;font-size:13px;line-height:1.55;margin:7px 0}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;padding:9px 11px;background:#2a2e3d;color:#e8e8ee;border:1px solid #495070;border-radius:6px;cursor:pointer;font:inherit}
+.opt:hover{background:#3a4160;border-color:#6ea8ff}
+.res{padding:9px;border-radius:6px;margin:7px 0}
+.ok{background:#1f3d2a;border:1px solid #3c9a5f}
+.ng{background:#4a2020;border:1px solid #c04848}
+.btn{padding:9px 18px;background:#6ea8ff;color:#0b0d14;border:none;border-radius:6px;font:inherit;font-weight:bold;cursor:pointer;margin-top:8px}
+.btn.sec{background:#495070;color:#e8e8ee}
+.hint{font-size:12px;color:#9aa0b5;margin-top:6px}
+.inp{width:100%;background:#2a2e3d;color:#fff;border:1px solid #495070;border-radius:6px;padding:7px;font:inherit;margin:3px 0 8px}
+label{display:block;font-size:13px;color:#9aa0b5}
+#ctrl{width:640px;max-width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 8px}
+#dpad{display:grid;grid-template-columns:repeat(3,62px);grid-template-rows:repeat(3,62px);gap:5px}
+.dp{font-size:22px;background:#2a2e3d;color:#e8e8ee;border:1px solid #495070;border-radius:12px;touch-action:none;cursor:pointer}
+.dp:active{background:#3a4160}
+#footer{width:640px;max-width:100%;font-size:12px;color:#9aa0b5;margin-top:6px}
+#certWrap{position:fixed;inset:0;background:#fff;color:#222;overflow:auto;padding:24px;z-index:50;display:none;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+.ct{max-width:720px;margin:0 auto;border:3px double #7a5a2b;padding:26px}
+.ct-head{text-align:center;color:#7a5a2b;font-size:15px}
+.ct-title{text-align:center;font-size:26px;font-weight:bold;margin:8px 0 14px;letter-spacing:4px}
+.ct-info,.lg{width:100%;border-collapse:collapse;font-size:14px}
+.ct-info td,.lg td{border:1px solid #bbb;padding:6px 8px}
+.ct-info td:nth-child(odd){background:#f3efe2;width:20%}
+.ct h3{border-left:4px solid #7a5a2b;padding-left:8px;font-size:15px;margin:16px 0 6px}
+.lg{font-size:13px}
+.ref{white-space:pre-wrap;border:1px solid #ccc;border-radius:4px;padding:10px;font-size:14px;line-height:1.7}
+.sign{margin-top:26px;font-size:14px}
+@media print{
+  body>*:not(#certWrap){display:none!important}
+  #certWrap{position:static!important;display:block!important;padding:0}
+  .noprint{display:none!important}
+}
+</style>
+</head>
+<body>
+<h1>香山高中 閱讀理解課程 合約大冒險小遊戲</h1>
+<div id="hud">
+  <div class="stat"><b>HP</b><span id="hpT"></span><div class="bar"><div id="hpB" style="background:#e5484d"></div></div></div>
+  <div class="stat"><b>金錢</b><span id="moneyT"></span></div>
+  <div class="stat"><b>等級</b><span id="lvT"></span><div class="bar"><div id="expB" style="background:#f5d90a"></div></div></div>
+  <div class="stat"><b>感情</b><span id="loveT"></span><div class="bar"><div id="loveB" style="background:#ff7eb6"></div></div></div>
+  <div class="stat"><b>進度</b><span id="progT"></span></div>
+  <div class="stat"><b>提示</b>靠近人物互動</div>
+</div>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="toast"></div>
+  <div id="panel"><div id="box"></div></div>
+</div>
+<div id="ctrl">
+  <div id="dpad">
+    <button class="dp" data-d="0,-1" style="grid-column:2;grid-row:1">▲</button>
+    <button class="dp" data-d="-1,0" style="grid-column:1;grid-row:2">◀</button>
+    <div style="grid-column:2;grid-row:2"></div>
+    <button class="dp" data-d="1,0" style="grid-column:3;grid-row:2">▶</button>
+    <button class="dp" data-d="0,1" style="grid-column:2;grid-row:3">▼</button>
+  </div>
+  <div class="hint" style="width:240px">靠近人物會開啟對話或合約。走路時可能遇到生活中的突發訊息（至少間隔 20 步，每則只出現一次）。</div>
+</div>
+<div id="footer">提示：閒聊的 NPC 不一定是陷阱，但他們說的話常藏著線索。合約上的每個數字都值得算一算。</div>
+<div id="certWrap"></div>
+
+<script>
+window.onerror=(m,s,l)=>{panel.style.display='flex';box.innerHTML='<b>發生錯誤：</b>'+m+' (line '+l+')';};
+
+const TILE=40,VW=16,VH=12,MW=30,MH=24;
+const cv=document.getElementById('game'),X=cv.getContext('2d');
+cv.width=VW*TILE;cv.height=VH*TILE;
+const $=id=>document.getElementById(id);
+const panel=$('panel'),box=$('box'),toastEl=$('toast');
+const rand=n=>Math.floor(Math.random()*n);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const sg=n=>(n>0?'+':'')+n;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* 選項工具：b=陷阱（會扣分），g=正確 */
+const b=(l,hp,m,lv,w)=>[l,false,hp,m,lv,w];
+const g=(l,w)=>[l,true,0,0,0,w];
+
+/* ================= 地圖 ================= */
+const BLD=[[2,2,5,4],[8,2,5,4],[18,2,5,4],[24,2,4,4],[2,7,5,2],[8,7,5,2],[18,7,5,2],
+  [2,13,5,4],[8,13,5,4],[18,13,5,4],[24,13,4,4],[2,19,5,3],[8,19,5,3],[18,19,5,3],[24,19,4,3]];
+const TREES=[[1,1],[28,1],[1,22],[28,22],[28,6],[28,17]];
+let M=[];
+function buildMap(){
+  M=[];
+  for(let y=0;y<MH;y++){
+    const r=[];
+    for(let x=0;x<MW;x++){
+      let c='.';
+      if(x===0||y===0||x===MW-1||y===MH-1)c='F';
+      else if(y===10||y===11)c='=';
+      else if((x*7+y*3)%5===0)c=',';
+      r.push(c);
+    }
+    M.push(r);
+  }
+  BLD.forEach(([bx,by,bw,bh])=>{for(let y=by;y<by+bh;y++)for(let x=bx;x<bx+bw;x++)M[y][x]='#';});
+  TREES.forEach(([x,y])=>{M[y][x]='T';});
+}
+function blocked(x,y){
+  if(x<0||y<0||x>=MW||y>=MH)return true;
+  return '#FT'.includes(M[y][x]);
+}
+
+/* ================= 14 關合約 ================= */
+const STAGES=[
+{e:'☕',n:'王老闆',p:[7,3],t:'打工面試：試用期陷阱',
+ b:'咖啡店老闆拿出一份《新進人員實習培訓合約》，笑著說：「我們店裡的拉花技術很專業，外面學都要收費的。你先試做三個月，當作學技術。如果考核通過、做得好，我們再來談正式薪水。沒問題的話就在這裡簽名。」',
+ c:'第三條　實習培訓\n1. 新進人員實習培訓期間為三個月，期間內不另支付薪資。\n2. 培訓期滿經甲方考核認定「表現良好」者，始由甲方決定是否錄用並約定薪資。\n3. 培訓期間乙方應依甲方排班到店服務，並遵守店內規範。\n4. 甲方提供之培訓屬技術學習，乙方不得主張為勞動關係。',
+ q:'面對這份合約，你最適合的回應是？',
+ l:'判斷勞動關係看的是「是否提供勞務並受指揮管理」，不是看合約名稱或「學技術」的說法。只要有勞務，就應依法給付薪資，並投保勞健保。',
+ o:[
+  b('老闆，合約上「做得好」的標準太模糊了，為了保護我自己，我要求把具體的考核過關標準白紙黑字寫進合約裡，才簽。',0,-3000,0,'標準寫清楚，只是讓「三個月不給薪」的條件更透明，並沒有解決「有勞務卻不付薪資」的問題。'),
+  g('老闆，試用期可以另行約定薪資，但不能低於法定基本工資。只要我有依排班在店裡工作，就算還在學，也屬於勞動，這三個月應依法計薪，並投保勞健保。','正確。試用期或實習培訓只要有提供勞務，就是勞動關係，應依法計薪，不能因「學技術」而免除。'),
+  b('既然是學技術，前三個月不拿薪水沒關係，但你要保證這三個月都有幫我保勞健保，而且每天要提供一餐員工餐喔！',-5,-3000,0,'勞健保是法定義務，不能拿來交換薪資。員工餐是額外福利，也不能取代最低工資。'),
+  b('老闆你騙人，現在《勞基法》早就全面廢除「試用期」了，你這份合約根本不合法，我不簽！',-10,-2000,0,'勞基法並未廢除試用期。試用期仍受勞基法保障，但不代表合約內容都不能談。')
+ ]},
+
+{e:'🏠',n:'陳太太',p:[14,3],t:'租屋簽約：押金與修繕',
+ b:'陳太太遞上租約說：「房子很新，押金是三個月租金。搬進來以後的小修小補都是你們租客自己處理，這是我們的規矩。今天簽約就可以拿鑰匙。」',
+ c:'第五條　押金與修繕\n1. 押金為三個月租金，乙方於簽約時一次付清。\n2. 租賃期間內，房屋一切修繕（含水電、門窗、家電）概由乙方負擔。\n3. 租期未滿提前終止者，押金不予退還。\n4. 退租時房屋如有任何損壞，甲方得自押金扣除。',
+ q:'面對這份租約，你最適合的回應是？',
+ l:'租屋的押金有法定上限，修繕責任也不能全部推給房客。判斷條款時，先看它是否符合法規，再看它如何分配責任。',
+ o:[
+  b('陳太太，租約上的修繕範圍和押金退還條件要寫得更具體。我希望逐項列出哪些由我負責、哪些由房東負責，才簽。',0,-3000,0,'列清楚修繕範圍是好習慣，但押金三個月已超過法定上限，修繕條款也不合理。只把條款寫細，不等於條款合理。'),
+  g('陳太太，押金依法不能超過兩個月租金，請改成兩個月。修繕部分，一般修繕屬房東責任，只有我故意或過失造成的損壞才由我負擔。退租時請我們一起點交並拍照存證。','正確。住宅押金不得超過兩個月租金；房屋一般修繕由出租人負擔，承租人僅就故意或過失造成的損壞負責。點交與拍照可作為退押金的依據。'),
+  b('押金我可以接受三個月，但你要保證修繕都由你負責，而且我每個月都能免費用你的洗衣機。',-5,-3000,0,'用多付押金換取小福利，等於接受了違法的押金與不合理的修繕責任。福利不能抵銷法定權利。'),
+  b('陳太太，租屋的押金通通不能超過一個月租金，你這份三個月的押金根本違法，我不簽！',-10,-2000,0,'押金上限是兩個月租金，不是一個月。假法規會誤導判斷，也容易在談判時失去信任。')
+ ]},
+
+{e:'🛍️',n:'手機店員',p:[23,6],t:'無卡分期：0元首期陷阱',
+ b:'店員笑著說：「這支手機首期 0 元，每個月只要 2,800 元，分 12 期就搞定！手續費是利息的部分，我們年利率 16%，跟一般的一樣啦。」',
+ c:'第四條　分期付款\n1. 分期總額為新台幣 33,600 元，分 12 期，每期 2,800 元。\n2. 手續費依年利率 16% 計算，並已含於分期總額。\n3. 遲繳者另加違約金，甲方得將債權轉讓第三人。\n4. 甲方得依乙方信用狀況調整分期條件。',
+ q:'面對這份分期合約，你最適合的回應是？',
+ l:'分期的「0 元」只代表首期，不代表沒有成本。判斷時要看總還款金額、實際年利率，並與現金購買或其他資金來源比較。',
+ o:[
+  g('我先把 33,600 元總額和每期 2,800 元算清楚，對照 30,000 元現金價，手續費約 3,600 元。我再比較這個分期的實際成本，和其他借貸或現金購買的差距，確認後才決定。','正確。先算總還款額與實質年利率，再與現金購買或其他資金來源比較，才能看出真正成本。'),
+  b('首期免付可以，但你幫我把手續費免掉，我就刷這台機器。',0,-2000,0,'免手續費若不是真的，或只是換成另一種費用，仍然沒有解決利率問題。條件交換不能改變成本結構。'),
+  b('我要求把每期的手續費與逾期違約金計算方式寫進合約，列清楚我再簽。',0,-3000,0,'寫清楚是對的，但在不知道實質年利率的情況下，即使寫清楚，也可能是高成本的分期。'),
+  b('消保法規定分期超過十二期就無效，你這份十二期的合約不能簽！',-5,-2000,0,'消保法並沒有這樣的規定。分期合約的問題在於總成本與利率，而不是期數本身。')
+ ]},
+
+{e:'🧪',n:'藥局櫃台',p:[1,12],t:'藥品：同成分的加倍陷阱',
+ b:'藥局櫃台說：「你頭很痛又發燒，我們這款退燒藥含乙醯胺酚。你之前買的綜合感冒藥也有相同成分，兩種一起吃比較快好，反正是不同盒子，分開算就好啦。」',
+ c:'乙醯胺酚（Acetaminophen）仿單摘錄（一般常見標示，請以實際包裝為準）\n1. 成人每次 500～1000 毫克，每 4～6 小時一次。\n2. 24 小時內不得超過 4000 毫克。\n3. 含同一成分的其他藥品，應一併計入總劑量。\n4. 肝功能不良者應諮詢醫師或藥師。',
+ q:'你最適合的回應是？',
+ l:'同一成分的藥品要合併計算劑量，不能因為是不同盒子就分開算。判斷時要看 24 小時總量是否超過上限，不確定時應諮詢藥師。',
+ o:[
+  b('我要先把兩盒的成分和每次劑量寫下來，確認清楚，再決定吃哪一種。',-5,0,0,'記下成分是好習慣，但如果沒有加總 24 小時上限，仍可能超量。細節只有在能算出總量時才有用。'),
+  b('藥師，你幫我把感冒藥和退燒藥的價格算便宜一點，我就照你說的兩種一起吃，不用看那麼多說明。',-15,0,0,'用折扣換取不看說明，是把健康風險拿去交換優惠。藥品劑量不能用交換條件來決定。'),
+  g('我先看兩盒的每次劑量與 24 小時上限，確認是否含同一種成分，把劑量合併計算。若總量仍不確定，就請藥師協助判斷，或只吃其中一種。','正確。同成分藥品要合併計算，確認 24 小時總量不超過上限；不確定時應諮詢藥師。'),
+  b('食藥署規定，不同廠牌的藥只要分開算劑量就不會超量，所以兩種一起吃完全沒問題。',-20,0,0,'同成分藥品的劑量要合併計算。「分開算」的說法會導致超量，屬於半調子的錯誤認知。')
+ ]},
+
+{e:'📱',n:'電信門市',p:[13,9],t:'0元手機：違約金陷阱',
+ b:'門市人員說：「這支 0 元手機，每個月月費 699 元，綁約 24 個月就免費送你。提前解約的話有一點點違約金，但你應該不會解約的啦！」',
+ c:'第三條　合約期間與違約\n1. 乙方選定 0 元手機方案，合約期間 24 個月。\n2. 手機價款於月費中分期攤還，不另收費用。\n3. 乙方於合約期間內提前終止者，應給付違約金，金額為剩餘月數 × 300 元，另加手機未攤還餘額。\n4. 合約期滿前，乙方不得變更方案。',
+ q:'面對這份電信合約，你最適合的回應是？',
+ l:'判斷「0 元」方案要算總成本，包含月費、違約金與手機未攤還的金額。不能只看首期價格，也不能因為「違約金」三個字就直接認定違法。',
+ o:[
+  b('電信合約一律不能收違約金，你這份有違約金條款，根本違法，我不簽！',-10,0,0,'電信合約的違約金並非一律不可收。判斷重點在於金額是否合理、是否已清楚揭露，而不是直接宣稱違法。'),
+  b('我要求把違約金公式寫清楚，並把 0 元手機的實際價格列在合約上，我再簽。',0,-3000,0,'寫清楚是對的，但只知道公式不夠，還要算出整段期間的總成本，才能判斷划不划算。'),
+  b('我簽 24 個月，你要保證之後隨時可以免費換約，還要送我一個月免費網路。',-5,-2000,0,'免費換約應在合約中明列，不應依口頭承諾。用交換條件取得口頭保證，仍然無法保障權益。'),
+  g('請你們列出提前解約的總金額：剩餘月數 × 違約金，加上手機未攤還餘額。再把 24 個月的月費總額，與不綁約的價格相比，確認划不划算後才決定。','正確。0 元方案的真實成本包含月費、違約金與手機攤還餘額，必須算出總額再比較。')
+ ]},
+
+{e:'💳',n:'行員小美',p:[20,9],t:'信用卡：循環利息陷阱',
+ b:'行員笑著說：「這張卡免年費喔！你刷的三萬元不用一次還清，每個月只要繳最低金額就好，剩下的慢慢還，很輕鬆。」',
+ c:'第六條　循環信用\n1. 消費款項未於繳款截止日全額清償者，未清償部分按年利率 15% 計算循環利息。\n2. 每期最低應繳金額依帳單所載計算。\n3. 本卡免年費，持卡人未依期全額清償者，循環利息自帳單結帳日起算。',
+ q:'面對這張信用卡，你最適合的回應是？',
+ l:'信用卡循環利息是高成本的借貸方式。判斷時要看利率、是否能全額清償，以及只繳最低金額會讓總成本增加多少。',
+ o:[
+  b('請你把循環利率和最低應繳金額寫在我的帳單上，我要看得清楚才用。',0,-3000,0,'知道利率是必要的，但只要持續循環信用，仍會以 15% 計息。細節清楚，不代表付得起。'),
+  g('我會在繳款截止日前全額還清，避免循環利息。若真的只能先繳最低金額，我會先算出每月循環利息的成本，並優先清償利率較高的債務。','正確。循環利息是高成本的借貸，最好的做法是全額清償；不得已時也要了解利息成本。'),
+  b('你幫我免年費，我就每個月只繳最低金額，這樣我的信用也會比較好看。',-5,0,0,'免年費與循環利息無關。用小福利換取高成本的付款方式，債務會越滾越大。'),
+  b('金管會規定信用卡循環利息不能超過 10%，你這張 15% 違法，我不刷這張卡！',-10,0,0,'循環利率法定上限是 15%，15% 本身並不違法。判斷應依法定上限，而不是自創標準。')
+ ]},
+
+{e:'🏥',n:'保險業務',p:[7,17],t:'醫療險：等待期與既往症',
+ b:'保險業務說：「這份醫療險住院、手術都有保障。你身體這麼好，應該不用擔心等待期啦，直接簽就好，保險就是要越早買越好！」',
+ c:'第四條　等待期與除外\n1. 本契約自生效日起 180 日內，因疾病住院或手術者，保險公司不負給付責任。\n2. 要保人或被保險人於投保前已罹患之疾病（既往症），不在保障範圍內。\n3. 要保人應誠實告知健康狀況，未據實告知者，保險公司得解除契約。',
+ q:'面對這份醫療險，你最適合的回應是？',
+ l:'保險的關鍵在等待期、既往症除外與告知義務。判斷時要確認這些條款如何影響理賠，並誠實告知自身健康狀況。',
+ o:[
+  g('我會先確認等待期與既往症的定義，並誠實告知過去的病史與健檢異常，避免之後理賠被拒。也會比較不同保單的等待期與保障內容，再決定要不要投保。','正確。等待期、既往症除外與告知義務是保險的核心。誠實告知才能保障權益，否則可能在理賠時被解除契約。'),
+  b('你保證我不用等待期，我就現在簽，順便送我一年的旅遊平安險。',-5,-2000,0,'等待期是契約條款，不能用口頭保證或附加贈品取代。口頭承諾不如白紙黑字可靠。'),
+  b('保險法規定所有醫療險都不能有等待期，這份條款無效，我不買！',-10,-1000,0,'保險法並未禁止等待期，等待期本身是常見的契約設計。宣稱條款無效，會讓人忽略真正該確認的問題。'),
+  b('我要求保險業務把保單上的理賠項目列成表格，我看完再簽。',0,-3000,0,'列表有助於閱讀，但沒有處理等待期與既往症，也沒有確認告知義務，理賠時仍可能被拒。')
+ ]},
+
+{e:'🚔',n:'學長阿志',p:[14,21],t:'交通罰單：通知單期限',
+ b:'學長看到你手上的罰單說：「通知單上的期限我看過了，等幾個月大概就會忘了，沒人會管啦。你先放著，過一陣子再說。」',
+ c:'道路交通管理事件通知單（摘錄）\n1. 受處分人應於通知單所載期限內繳納罰鍰或提出申訴。\n2. 逾期未繳納或未申訴者，得加重處罰或移送強制執行。\n3. 申訴應依通知單所載方式與期限辦理。',
+ q:'面對這張罰單，你最適合的回應是？',
+ l:'交通罰單的處理依通知單所載期限與方式進行。拖延、請託或聽說的「自動失效」都不能取代正式程序。',
+ o:[
+  b('我要先把罰單上的條碼與金額核對清楚，確認沒有繳錯。',0,-3000,0,'核對金額是好習慣，但如果只核對、不看期限，仍可能逾期被加重處罰。'),
+  b('學長，你幫我跟交通隊說一聲我會去繳，我就不用管期限了，我請你吃飯。',-5,0,0,'請託與請吃飯無法取代法定程序。期限與申訴方式以通知單為準，不能靠人情處理。'),
+  g('我會先查通知單上的繳款期限與申訴期限，在期限內選擇繳納或申訴。若有疑問，再向交通單位確認處理方式。','正確。舉發通知單有明確期限，應依所載期限與方式處理，逾期可能加重處罰。'),
+  b('道路交通管理處罰條例規定，罰單超過三個月就自動失效，所以不用管。',-10,0,0,'罰單不會因時間經過自動失效。拖延只會增加風險，可能導致加重處罰。')
+ ]},
+
+{e:'📺',n:'訂閱業務',p:[26,9],t:'自動續訂：試用期陷阱',
+ b:'業務說：「免費試用 30 天喔！試用結束如果你覺得不錯，就不用做任何事，系統會自動續約。要取消的話，隨時都可以在 APP 裡面操作。」',
+ c:'第二條　試用與續訂\n1. 免費試用期間為 30 日，試用期滿自動轉為付費會員，年費 3,600 元，以信用卡按年扣款。\n2. 欲終止續訂者，應於試用期滿前或續訂日前 30 日，以書面或線上方式提出。\n3. 未於期限內終止者，視為同意續訂。',
+ q:'面對這份訂閱服務，你最適合的回應是？',
+ l:'自動續訂常在試用期滿後扣款，取消期限可能早於你的預期。判斷時要看扣款金額、扣款日期、取消期限與方式。',
+ o:[
+  b('我要求把試用期的日期、扣款金額與取消方式寫在合約上，我看清楚再試用。',0,-3000,0,'寫清楚是好習慣，但如果沒有設定提醒，仍可能因為忘記取消而被自動扣款。'),
+  g('我會先記下試用期結束日、取消期限與方式，並在行事曆設定提醒。若試用期間不需要，就主動取消，並確認之後不會自動扣款。','正確。自動續訂的取消期限可能早於扣款日，應先掌握期限與方式，並設定提醒。'),
+  b('消保法規定所有自動續訂都無效，我不用取消，他們也不能扣款。',-10,0,0,'自動續訂並非一律無效，合約仍然有效。宣稱不用處理，反而容易被扣款。'),
+  b('你免費送我一個月，我就不取消，還幫你推薦朋友來試用。',-5,-2000,0,'用推薦與小優惠交換，無法取代取消期限。最後仍可能被自動扣除年費。')
+ ]},
+
+{e:'📦',n:'網購賣家',p:[23,17],t:'網購退貨：客製化商品',
+ b:'賣家說：「這是我們幫你客製繡名字的毛毯，下單後就不能退喔！所以要確定文字再下單。也因為是客製的，我們不接受七天鑑賞期。」',
+ c:'商品條款\n1. 本商品依買家指定之文字與圖樣特別製作，不適用七日無條件解約。\n2. 商品若有運送瑕疵或與訂單不符，買家得依法主張權利。\n3. 退貨請於收到商品後七日內聯繫客服。',
+ q:'面對這份網購條款，你最適合的回應是？',
+ l:'七日鑑賞期有例外規定，客製化商品通常不適用。但瑕疵與與訂單不符的權利仍然存在。判斷時要分清楚「不能無理由退」與「不能主張瑕疵」的差別。',
+ o:[
+  b('你不給我退，我也能接受，但你要給我九折並免運費，我就下單。',0,-2000,0,'折扣與免運不能改變法律關係。若不符合退貨條件，應先確認是否有其他權利，而不是用交換條件來取代保障。'),
+  g('下單前我會先確認是否屬於依消費者需求特別製作的商品，這類通常不適用七日鑑賞期。收到後若有瑕疵或與訂單不符，我仍可主張退貨或換貨，並先拍照保留證據。','正確。消保法規定依消費者需求特別製作的商品不適用七日鑑賞期，但瑕疵或與訂單不符的權利仍然存在。'),
+  b('我要求賣家把客製內容的字型、字數與顏色再寫一次，確認後才下單，以免出錯。',-5,0,0,'確認細節能減少錯誤，但不能解決「不能退」的問題。若已經下單，仍可能無法無理由退貨。'),
+  b('消保法規定所有網購商品都可以七天內無理由退貨，客製化也一樣，你不能拒絕！',-10,0,0,'消保法有例外，依消費者需求特別製作的商品不適用七日鑑賞期。主張錯誤規定只會浪費交涉時間。')
+ ]},
+
+{e:'💼',n:'人資小姐',p:[14,15],t:'離職後競業禁止',
+ b:'人資小姐說：「我們是科技公司，員工離職後兩年內不能在同業任職，地域不限全台灣。這是公司標準規定，大家都簽，不另外補償喔。」',
+ c:'第九條　競業禁止\n1. 乙方離職後二年內，不得於與甲方營業範圍相同或類似之公司任職或經營。\n2. 本條款之地域範圍為全台灣。\n3. 乙方不得主張任何補償。',
+ q:'面對這份競業禁止條款，你最適合的回應是？',
+ l:'競業禁止要看期間、地域、職務範圍與補償是否合理。判斷時不要只看「有沒有寫」，也不要以為「一律無效」。',
+ o:[
+  g('我會要求限制明確的期間、地域與職務範圍，並確認離職後是否有合理補償。若條款過於寬鬆，我會請專業人士協助判斷，確認後再決定要不要簽。','正確。競業禁止須審視期間、地域、職務範圍與補償是否合理，過度限制可能無效，但仍應謹慎處理。'),
+  b('不補償也可以，但你要幫我加薪一成，而且我可以自己選擇要去哪間公司。',-5,0,0,'加薪不能取代合理限制。條款過於嚴苛時，應先確認其合理性，而不是用其他條件交換。'),
+  b('勞基法已經明文禁止所有競業禁止條款，這份合約不合法，我不簽！',-10,0,0,'勞基法並未全面禁止競業禁止。判斷應依個案的合理性，而不是全面否定。'),
+  b('我要求把同業的定義寫清楚、列出公司名單，這樣我就知道哪些公司不能去。',0,-2000,0,'定義清楚是好事，但只列名單，不代表期間、地域與補償合理，仍可能過度限制。')
+ ]},
+
+{e:'💸',n:'借貸業務',p:[7,22],t:'小額借貸：日息陷阱',
+ b:'借貸業務說：「不用擔心啦！只要每天還 0.3% 的利息，三個月就還得完，我們不收手續費，很方便。今天就能撥款給你。」',
+ c:'第二條　借款條件\n1. 借款金額 30,000 元，期間 90 日。\n2. 利息依日息 0.3% 計算，逾期者另加遲延利息。\n3. 借款人同意以手機定位與通訊錄作為催收依據。',
+ q:'面對這份借款合約，你最適合的回應是？',
+ l:'判斷借貸要先換算成年利率，再對照法定上限。日息看起來很小，但乘上 365 天就很驚人。也要留意合約中的催收條款。',
+ o:[
+  b('只要合約上把每天的利息寫出來，就是合法的，法院也不能判我不用還。',-10,0,0,'一般民間借貸約定年息超過 16% 的部分無效，寫在合約上不代表合法。'),
+  b('你不收手續費，我就每天準時還，還可以幫你推薦朋友來借。',0,-2000,0,'用推薦與守時交換，無法改變高利率。免手續費不代表便宜，利率才是關鍵。'),
+  g('我先把日息 0.3% 換算成年利率，約 109.5%，對照一般民間借貸年息 16% 的上限，超過部分可能無效。我會先諮詢消費者保護或法律扶助單位，並比較其他合法借貸管道。','正確。日息 0.3% 乘以 365 天約為年息 109.5%，遠超過法定上限。應先換算利率並諮詢專業單位。'),
+  b('我要求把總還款金額、逾期利息與催收方式寫清楚，我都看過再簽。',0,-3000,0,'寫清楚是必要的，但若總成本已遠超法定上限，即使寫清楚，也可能是不當的高利貸。')
+ ]},
+
+{e:'🏦',n:'房貸專員',p:[23,22],t:'房貸：提前還款違約金',
+ b:'房貸專員說：「利率現在很划算，你先簽約。以後如果想提前還，三年內會有一點違約金，但你應該不會那麼快還啦，而且現在簽約比較划算。」',
+ c:'第七條　提前清償\n1. 乙方於貸款後三年內提前清償者，應給付提前清償違約金，金額為提前清償金額之 1%。\n2. 乙方於第三年後提前清償者，不收違約金。\n3. 違約金得於清償時一併扣收。',
+ q:'面對這份房貸合約，你最適合的回應是？',
+ l:'房貸提前還款要比較「省下的利息」與「違約金」。判斷時要看違約期間、計算方式與你可能提前還款的時間點。',
+ o:[
+  b('我要求把違約金的計算方式與期限寫清楚，並在合約上標示清楚，我再簽。',0,-3000,0,'寫清楚是應該的，但沒有評估提前還款省下的利息是否大於違約金，仍可能判斷錯誤。'),
+  b('你免我違約金，我就在你們銀行辦一張信用卡，一年內都刷你們的卡。',-5,-2000,0,'違約金與綁卡消費是兩回事。用綁卡交換免違約金，會增加消費負擔，也不保證真的免除。'),
+  b('依民法規定，房貸任何時候都可以無條件提前還清，違約金條款一律無效。',-10,0,0,'民法並未規定所有提前清償都無違約金。違約金條款需依契約與相關規定判斷，不能一概而論。'),
+  g('我會先確認違約金的期間、計算方式與上限，並算出提前還款可以省下多少利息，比較是否大於違約金。若利率差距不大，我也會考慮是否轉貸或暫不提前還款。','正確。提前還款須比較節省的利息與違約金，並確認違約期間與計算方式。')
+ ]},
+
+{e:'🌿',n:'健康食品業務',p:[14,6],t:'健康食品：誇大宣稱陷阱',
+ b:'業務說：「這是天然濃縮膠囊，吃三個月就能降血糖，很多人都停掉藥了。你有糖尿病也可以試試看，效果不好再跟我說。」',
+ c:'產品說明\n品名：（天然）濃縮植物膠囊\n廣告文案：天然成分，吃三個月降血糖、改善體質、遠離慢性病。\n注意事項：如有疾病請諮詢醫師。',
+ q:'面對這樣的產品宣傳，你最適合的回應是？',
+ l:'健康食品不能宣稱治療疾病或療效，判斷時要看包裝是否有合法標示，並以醫師建議為準，不以業務口頭說法為準。',
+ o:[
+  b('我要求把「降血糖」這個說法寫在收據上，這樣我才知道產品功效是什麼。',-5,0,0,'寫在收據上不代表功效被證實。把誇大宣稱寫下來，反而可能讓人更相信。'),
+  g('健康食品不能宣稱治療疾病或療效。我會查看包裝是否有健康食品標章與許可字號，不以業務的口頭說法為準。有糖尿病的話，我不會因此停藥，會先諮詢醫師。','正確。健康食品只能宣稱保健功能，不能宣稱降血糖等療效；有疾病應遵照醫囑用藥。'),
+  b('你給我買一送一，我就幫你宣傳給同學，順便試吃，效果好再說。',-15,0,0,'用宣傳與優惠交換，等於以身體試驗取代查證。功效宣稱不會因促銷而變得真實。'),
+  b('只要標榜是天然成分，廣告寫能治療糖尿病也不違法，所以你放心買。',-20,0,0,'廣告宣稱仍須符合法規，天然成分不代表可以宣稱療效。把天然當成免罪符，是常見的錯誤認知。')
+ ]}
+];
+
+
+/* 閒聊 NPC（不一定是陷阱） */
+const CHATS=[
+ {e:'👩',n:'媽媽',p:[1,4],lines:['阿宏，今天面試順利嗎？冰箱有菜，記得吃飯。','媽媽今天輪大夜班，你要照顧好自己。','簽東西之前要先看清楚。媽媽不懂法律，但你要學會看。']},
+ {e:'👧',n:'阿珍',p:[7,6],lines:['阿宏！你還在找打工喔？我上次那家店後來才發現沒有給加班費。','聽說有些店會叫你先試做、不給錢，你要小心喔。','欸，信用卡帳單又來了，我一直都只繳最低，好煩。']},
+ {e:'👵',n:'房東奶奶',p:[23,1],lines:['小伙子，你要租房子喔？以前房子漏水都是房東修的，現在的人啊……','這社區以前很安靜，現在很多人在做分期，我看了都心疼。']},
+ {e:'🧑',n:'店員',p:[28,12],lines:['歡迎光臨！我們今天有新的會員方案要不要加入？（小聲）其實很多人都沒看條款就加入了。','要不要來杯飲料？我們的小包裝最划算啦。']}
+];
+
+const MONO=['又是月底，帳戶只剩兩千塊……','媽媽說人要靠自己，可是我連合約都看不太懂。','小雨傳訊息問我週末去哪，我還沒想好怎麼回。','我真的很想快點賺錢，讓媽媽不用再輪大夜班。','每個人都說「很划算」，可是划算的到底是誰？','這條路好長，但我得一步一步走下去。'];
+
+/* 隨機事件（每件只有一個正確選項） */
+const EV=[
+ {t:'女友的訊息',x:'小雨傳來：「隨便你啦，你決定就好。」',o:[
+   ['好喔，那我就去打電動了。',false,0,0,-20,'「隨便你」常是情緒的訊號。直接跟著自己的想法走，對方可能覺得不被在意。'],
+   ['那我們見面聊一下好嗎？我想知道你真正的想法。',true,0,0,10,'把「隨便」背後的感受問出來，比猜測或賭氣更有效。'],
+   ['喔，那就算了。',false,0,0,-15,'用沉默結束，等於把問題留著，對方會更失望。'],
+   ['那我就照我想的做，你不要生氣。',false,0,0,-10,'只顧自己的決定，沒有確認對方的感受，關係容易越走越遠。']]},
+ {t:'國稅局簡訊',x:'【國稅局】您有退稅 $4,820 未領取，請於 24 小時內登錄：http://tax-refund.gov-tw.cc',o:[
+   ['點連結登錄，趕快把錢領回來。',false,0,-8000,0,'網域是 .cc，不是政府的 .gov.tw。這是釣魚網站，會盜取帳號與卡號。'],
+   ['回覆簡訊，提供身分證字號確認。',false,-10,-3000,0,'政府不會用簡訊要你回傳個資。回覆等於讓詐騙者掌握資料。'],
+   ['不點連結，改用國稅局官網或電話自行查詢。',true,0,0,0,'正確。透過官方管道查證，才能確認是否真有退稅。'],
+   ['轉傳給朋友，問他們有沒有收到。',false,-5,-1000,0,'轉傳會讓更多人受騙，也無法確認真偽。']]},
+ {t:'朋友的投資邀約',x:'大學同學阿凱傳來：「穩賺不賠，每日 3% 報酬，本金保證！加入我的群組，這週最後名額！」',o:[
+   ['全部投進去，錯過就沒機會了。',false,0,-10000,0,'「穩賺不賠」「本金保證」是典型詐騙用語。投資風險不可能被消除。'],
+   ['先投 1,000 元試試看。',false,0,-1000,0,'小額試水溫也是陷阱，等你投更多時，對方就會開始催促。'],
+   ['先查證：是否有合法登記（如金管會核准），以及報酬從哪裡來。',true,0,0,0,'正確。合法投資機構會揭露風險與資訊，不會保證獲利。'],
+   ['不要問太多，朋友推的應該沒問題。',false,-5,-3000,-5,'人情不能代替查證。越是親近的人推薦，越要先確認。']]},
+ {t:'同學借錢',x:'同學小明說：「我下週領薪水就還你，先借我 5,000，急用！」',o:[
+   ['直接轉帳，朋友之間不用那麼計較。',false,0,-5000,0,'沒有借據與還款日，若對方忘記或有困難，很難追討，也容易傷感情。'],
+   ['要求寫借據，註明金額、還款日與利息。',true,0,-5000,5,'正確。書面借據能保障雙方，也讓約定清楚，人情與金錢分開。'],
+   ['借 2,000 就好，但不寫任何東西。',false,0,-2000,-5,'金額小仍需書面。沒寫清楚，之後的誤解也會很多。'],
+   ['說不方便，但私下又偷偷轉帳。',false,-5,-3000,-5,'拒絕後又轉帳，等於沒有界線，之後更難收回。']]},
+ {t:'網拍私下交易',x:'網拍賣家說：「我們私下 LINE 交易，不用經過平台，便宜三成！先匯款給我。」',o:[
+   ['好，划算，直接匯款。',false,0,-12000,0,'離開平台交易後，就失去買家保障，對方失聯就很難追回。'],
+   ['先匯一半訂金，剩下的面交再付。',false,0,-6000,0,'訂金也可能被詐騙。付款仍應透過平台或有保障的方式進行。'],
+   ['留在平台內交易，確認賣家評價與保障機制再付款。',true,0,0,0,'正確。平台交易有保障，離開平台就失去這層保護。'],
+   ['要求對方先寄貨，我看到再付款。',false,-5,-2000,0,'對方可能是假賣家。要靠平台的付款保障，而不是口頭承諾。']]},
+ {t:'同事請你當保證人',x:'同事說：「幫我簽個保證人啦，很簡單，只是形式！」',o:[
+   ['好啊，朋友之間不用想太多，直接簽。',false,-5,-10000,-10,'保證人負的是連帶責任，同事欠錢你要一起還，也可能影響你的信用。'],
+   ['先看保證的金額、期間與責任範圍，再決定。',true,0,0,0,'正確。保證責任往往很大，簽之前要先了解範圍與期間。'],
+   ['我不簽，但不想說為什麼，先不回應。',false,0,0,-5,'拒絕本身沒有問題，但也應清楚表達，避免對方誤會。'],
+   ['先簽再說，萬一出事就跟他一起處理。',false,-5,-8000,-5,'「萬一出事再說」等於把風險留給自己，很多人就是這樣被拖下水。']]},
+ {t:'假抽獎連結',x:'LINE 訊息：「恭喜您中獎 iPhone 16！請於 30 分鐘內點擊連結填寫資料領獎。」',o:[
+   ['太幸運了！立刻點開填資料。',false,-10,-5000,0,'中獎通常不需要先填寫個資與付款資訊。這是典型的釣魚手法。'],
+   ['不點連結，直接刪除並封鎖。',true,0,0,0,'正確。沒有參加過的抽獎，不要點任何連結。'],
+   ['點開看看內容，但不輸入資料。',false,-15,0,0,'只是點開也可能被植入惡意程式或導向假網站。'],
+   ['轉傳給朋友，看他們有沒有中獎。',false,-5,-1000,0,'轉傳會讓詐騙擴散，也等於幫詐騙者找下一個目標。']]}
+];
+
+/* ================= 狀態 ================= */
+const NPCS=[];
+STAGES.forEach((s,i)=>NPCS.push({x:s.p[0],y:s.p[1],e:s.e,n:s.n,type:'stage',idx:i,done:false,near:false}));
+CHATS.forEach(c=>NPCS.push({x:c.p[0],y:c.p[1],e:c.e,n:c.n,type:'chat',lines:c.lines,seen:false,near:false}));
+
+const usedEv=[];   // 已出現過的隨機事件索引
+const P={x:15,y:10,hp:100,maxHp:100,money:20000,love:80,lv:1,exp:0,steps:0,lastEv:0,cleared:0};
+const LOG=[];
+let modal=false,awaiting=false,CUR=null,ended=false,over=false;
+
+function npcAt(x,y){return NPCS.find(n=>n.x===x&&n.y===y);}
+
+function updateHUD(){
+  $('hpT').textContent=P.hp+'/'+P.maxHp;
+  $('hpB').style.width=(P.hp/P.maxHp*100)+'%';
+  $('moneyT').textContent='$'+P.money.toLocaleString();
+  $('lvT').textContent='Lv.'+P.lv;
+  $('expB').style.width=(P.exp/(P.lv*100)*100)+'%';
+  $('loveT').textContent=P.love;
+  $('loveB').style.width=Math.min(100,P.love)+'%';
+  $('progT').textContent=P.cleared+'/'+STAGES.length+' 關';
+}
+function toast(t){
+  toastEl.textContent=t;toastEl.style.display='block';
+  clearTimeout(toast.t);toast.t=setTimeout(()=>toastEl.style.display='none',2200);
+}
+function gainExp(x){
+  if(!x)return;
+  P.exp+=x;
+  while(P.exp>=P.lv*100){P.exp-=P.lv*100;P.lv++;P.maxHp+=10;P.hp=Math.min(P.maxHp,P.hp+15);toast('升級了！最大 HP +10');}
+}
+function openPanel(html){box.innerHTML=html;panel.style.display='flex';modal=true;}
+
+/* ================= 移動與事件 ================= */
+function move(dx,dy){
+  if(modal||over)return;
+  const nx=P.x+dx,ny=P.y+dy;
+  if(blocked(nx,ny))return;   // NPC 不再擋路
+  P.x=nx;P.y=ny;P.steps++;
+  afterStep();
+}
+function afterStep(){
+  if(Math.random()<0.08)toast(MONO[rand(MONO.length)]);
+  for(const n of NPCS){
+    const adj=Math.abs(n.x-P.x)+Math.abs(n.y-P.y)===1;
+    if(adj&&!n.near){
+      n.near=true;
+      if(n.type==='stage'&&!n.done){startStage(n);return;}
+      if(n.type==='chat'&&!n.seen){startChat(n);return;}
+    }
+    if(!adj)n.near=false;
+  }
+  if(P.steps-P.lastEv>=20&&usedEv.length<EV.length&&Math.random()<0.3)startEvent();
+}
+function startChat(n){
+  n.seen=true;
+  const line=n.lines[rand(n.lines.length)];
+  openPanel(`<div class="speaker">${n.e} ${n.n}</div><div class="msg">「${line}」</div><button class="btn" onclick="closePanel()">好的</button>`);
+}
+function startStage(n){
+  const s=STAGES[n.idx];
+  ask(`${s.e} ${s.n}　<span class="sub">${s.t}</span>`,
+      `<div class="msg">${s.b}</div><div class="contract">${s.c}</div><div><b>${s.q}</b></div>`,
+      s.o,n,s.t,s.l);
+}
+function startEvent(){
+  const pool=EV.map((_,i)=>i).filter(i=>!usedEv.includes(i));
+  if(!pool.length)return;
+  const idx=pool[rand(pool.length)];
+  usedEv.push(idx);
+  P.lastEv=P.steps;
+  const e=EV[idx];
+  ask(`📩 突發事件：${e.t}`,`<div class="msg">${e.x}</div><div><b>你要怎麼回應？</b></div>`,e.o,null,e.t,'');
+}
+
+/* ================= 選擇題 ================= */
+function ask(head,body,opts,npc,title,lesson){
+  CUR={opts:shuffle(opts.slice()),npc,title,lesson};
+  awaiting=true;
+  openPanel(`<div class="speaker">${head}</div>${body}`+
+    CUR.opts.map((o,i)=>`<button class="opt" onclick="choose(${i})"><b>${i+1}.</b> ${o[0]}</button>`).join('')+
+    `<div class="hint">可點選，或按鍵盤 1–4</div>`);
+}
+function choose(i){
+  if(!awaiting||!CUR)return;
+  awaiting=false;
+  const [label,ok,hp,money,love,why]=CUR.opts[i];
+  P.hp=Math.max(0,P.hp+hp);
+  P.money+=money;
+  P.love=Math.max(0,P.love+love);
+  const xp=ok?(CUR.npc?30:10):0;
+  gainExp(xp);
+  LOG.push({t:CUR.title,c:label,ok,why});
+  if(CUR.npc){CUR.npc.done=true;P.cleared++;}
+  box.innerHTML=`<div class="res ${ok?'ok':'ng'}"><b>${ok?'✅ 判斷正確':'⚠️ 掉進陷阱'}</b><br>你的選擇：${esc(label)}</div>
+    <div class="msg">${why}</div>
+    ${CUR.lesson?`<div class="msg">📘 重點：${CUR.lesson}</div>`:''}
+    <div class="hint">HP ${sg(hp)}　金錢 ${sg(money)}　感情 ${sg(love)}${xp?'　經驗 +'+xp:''}</div>
+    <button class="btn" onclick="closePanel()">繼續</button>`;
+  updateHUD();
+}
+function closePanel(){
+  panel.style.display='none';modal=false;awaiting=false;CUR=null;
+  updateHUD();
+  if(P.hp<=0||P.money<=0||P.love<=0)return gameOver();
+  if(!ended&&P.cleared===STAGES.length)return ending();
+}
+
+/* ================= 開場、結局、失敗 ================= */
+function intro(){
+  openPanel(`<div class="speaker">📖 故事開場</div>
+  <div class="msg">阿宏，十八歲，剛從高中畢業。爸爸很早就離開了，媽媽一個人在工廠輪班，把他拉拔長大。</div>
+  <div class="msg">他正在找工作，也希望能早點幫媽媽分擔。女友小雨一直陪在身邊，只是最近兩人的話變少了。</div>
+  <div class="msg">口袋裡有 2 萬元，是他這段時間打工存下來的。他想好好開始自己的人生，卻不知道世界上有很多「看起來很划算」的文件，正等著他簽下。</div>
+  <div class="hint">操作：WASD / 方向鍵，或畫面下方的方向鈕（手機可按住連續移動）。靠近人物會開啟對話或合約，遇到合約請用 1–4 鍵或點選選項。</div>
+  <button class="btn" onclick="startGame()">開始冒險</button>`);
+}
+function startGame(){panel.style.display='none';modal=false;updateHUD();toast('出發吧！');}
+
+function gameOver(){
+  over=true;
+  const why=P.hp<=0?'身體撐不住了，健康受到嚴重傷害。':P.money<=0?'錢花光了，連基本生活都成問題。':'感情破裂，小雨決定不再等你。';
+  openPanel(`<div class="speaker">💀 冒險結束</div>
+  <div class="msg">${why}</div>
+  <div class="msg">在合約世界裡，沒看懂的每一個數字，最後都會變成代價。</div>
+  <button class="btn" onclick="location.reload()">重新開始</button>`);
+}
+
+function ending(){
+  ended=true;
+  openPanel(`<div class="speaker">🎉 大結局</div>
+  <div class="msg">阿宏走完了所有關卡。他想起媽媽說過的話：「簽東西之前，要先看清楚。」</div>
+  <div class="msg">等級 Lv.${P.lv}｜剩餘金錢 $${P.money.toLocaleString()}｜HP ${P.hp}｜感情 ${P.love}</div>
+  <label>姓名</label><input class="inp" id="nm">
+  <label>班級</label><input class="inp" id="cl">
+  <label>學習心得（至少 30 字）</label><textarea class="inp" id="rf" rows="6"></textarea>
+  <button class="btn" onclick="makeCert()">一鍵生成學習成果單</button>`);
+}
+
+function makeCert(){
+  const nm=$('nm').value.trim(),cl=$('cl').value.trim(),rf=$('rf').value.trim();
+  if(!nm){alert('請填寫姓名');return;}
+  if(rf.length<30){alert('學習心得至少 30 字（目前 '+rf.length+' 字）');return;}
+  const okN=LOG.filter(l=>l.ok).length;
+  const rate=LOG.length?Math.round(okN/LOG.length*100):0;
+  const rows=LOG.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(l.t)}</td><td>${esc(l.c)}</td><td>${l.ok?'✔ 正確':'✘ 陷阱'}</td></tr>`).join('');
+  $('certWrap').innerHTML=`<div class="ct">
+    <div class="ct-head">香山高中閱讀理解課程 合約大冒險 · 學習成果單</div>
+    <div class="ct-title">學 習 成 果 單</div>
+    <table class="ct-info">
+      <tr><td>姓名</td><td>${esc(nm)}</td><td>班級</td><td>${esc(cl)||'—'}</td></tr>
+      <tr><td>完成關卡</td><td>${P.cleared}/${STAGES.length}</td><td>最終等級</td><td>Lv.${P.lv}</td></tr>
+      <tr><td>剩餘 HP</td><td>${P.hp}</td><td>剩餘金錢</td><td>$${P.money.toLocaleString()}</td></tr>
+      <tr><td>感情值</td><td>${P.love}</td><td>判斷正確率</td><td>${rate}%（${okN}/${LOG.length}）</td></tr>
+    </table>
+    <h3>一、判斷紀錄</h3>
+    <table class="lg"><tr><td>#</td><td>情境</td><td>我的選擇</td><td>結果</td></tr>${rows}</table>
+    <h3>二、學習心得</h3>
+    <div class="ref">${esc(rf)}</div>
+    <div class="sign">學生簽名：__________　　日期：____ 年 __ 月 __ 日</div>
+    <div class="noprint" style="margin-top:14px">
+      <button class="btn" onclick="window.print()">列印 / 存成 PDF</button>
+      <button class="btn sec" onclick="$('certWrap').style.display='none'">返回</button>
+    </div>
+  </div>`;
+  $('certWrap').style.display='block';
+  window.scrollTo(0,0);
+}
+
+/* ================= 繪圖 ================= */
+function drawTile(c,x,y,my){
+  const S=TILE;
+  if(c==='#'){
+    X.fillStyle='#6d5f94';X.fillRect(x,y,S,S);
+    X.fillStyle='#4f4475';X.fillRect(x,y,S,5);
+    X.fillStyle='#c9e4ff';
+    X.fillRect(x+7,y+10,8,8);X.fillRect(x+25,y+10,8,8);
+    X.fillRect(x+7,y+26,8,8);X.fillRect(x+25,y+26,8,8);
+  }else if(c==='T'){
+    X.fillStyle='#5f9e4e';X.fillRect(x,y,S,S);
+    X.fillStyle='#6b4a2b';X.fillRect(x+17,y+24,6,12);
+    X.fillStyle='#2e6b35';X.beginPath();X.arc(x+20,y+18,15,0,7);X.fill();
+  }else if(c==='F'){
+    X.fillStyle='#8b6b43';X.fillRect(x,y,S,S);
+    X.fillStyle='#b38b57';X.fillRect(x+3,y+3,S-6,S-6);
+  }else if(c==='='){
+    X.fillStyle='#3e4148';X.fillRect(x,y,S,S);
+    if(my===10){X.fillStyle='#f0d060';X.fillRect(x+6,y+S-2,S-12,2);}
+  }else if(c===','){
+    X.fillStyle='#5f9e4e';X.fillRect(x,y,S,S);
+    X.fillStyle='#4f8a40';X.beginPath();X.arc(x+10,y+12,2,0,7);X.arc(x+28,y+26,2,0,7);X.fill();
+  }else{
+    X.fillStyle='#d8c9a4';X.fillRect(x,y,S,S);
+    X.strokeStyle='#c6b78f';X.strokeRect(x+.5,y+.5,S-1,S-1);
+  }
+}
+function draw(){
+  const cx=clamp(P.x-(VW>>1),0,MW-VW),cy=clamp(P.y-(VH>>1),0,MH-VH);
+  X.fillStyle='#222';X.fillRect(0,0,cv.width,cv.height);
+  for(let ty=0;ty<VH;ty++)for(let tx=0;tx<VW;tx++){
+    const mx=cx+tx,my=cy+ty;
+    drawTile(M[my][mx],tx*TILE,ty*TILE,my);
+  }
+  X.textAlign='center';X.textBaseline='middle';
+  for(const n of NPCS){
+    const tx=n.x-cx,ty=n.y-cy;
+    if(tx<0||ty<0||tx>=VW||ty>=VH)continue;
+    const px=tx*TILE,py=ty*TILE;
+    X.globalAlpha=n.done?0.45:1;
+    X.font='26px sans-serif';X.fillStyle='#fff';
+    X.fillText(n.e,px+TILE/2,py+TILE/2-2);
+    X.globalAlpha=1;
+    X.fillStyle='rgba(0,0,0,.65)';X.fillRect(px+2,py+TILE-13,TILE-4,12);
+    X.font='11px sans-serif';X.fillStyle='#fff';
+    X.fillText(n.n,px+TILE/2,py+TILE-7);
+    if(n.done){X.font='bold 14px sans-serif';X.fillStyle='#7CFC00';X.fillText('✓',px+TILE-8,py+8);}
+  }
+  const px=(P.x-cx)*TILE,py=(P.y-cy)*TILE;
+  X.fillStyle='#4aa3ff';X.beginPath();X.arc(px+TILE/2,py+TILE/2,14,0,7);X.fill();
+  X.strokeStyle='#fff';X.lineWidth=2;X.stroke();
+  X.fillStyle='#fff';X.font='bold 12px sans-serif';X.fillText('宏',px+TILE/2,py+TILE/2);
+}
+
+/* ================= 輸入 ================= */
+const KEY={ArrowUp:[0,-1],w:[0,-1],W:[0,-1],ArrowDown:[0,1],s:[0,1],S:[0,1],ArrowLeft:[-1,0],a:[-1,0],A:[-1,0],ArrowRight:[1,0],d:[1,0],D:[1,0]};
+addEventListener('keydown',e=>{
+  if(KEY[e.key]){e.preventDefault();move(...KEY[e.key]);return;}
+  if(modal&&awaiting&&CUR&&/^[1-4]$/.test(e.key)&&+e.key<=CUR.opts.length){choose(+e.key-1);}
+});
+document.querySelectorAll('.dp').forEach(btn=>{
+  const [dx,dy]=btn.dataset.d.split(',').map(Number);
+  let timer=null;
+  const stop=()=>{clearInterval(timer);timer=null;};
+  btn.addEventListener('pointerdown',e=>{
+    e.preventDefault();move(dx,dy);stop();
+    timer=setInterval(()=>move(dx,dy),170);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,stop));
+});
+
+/* ================= 啟動 ================= */
+buildMap();
+updateHUD();
+intro();
+setInterval(draw,50);
+</script>
+</body>
+</html>
